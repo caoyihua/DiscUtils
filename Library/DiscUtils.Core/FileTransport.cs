@@ -23,6 +23,8 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using DiscUtils.Internal;
 
 namespace DiscUtils
@@ -57,7 +59,19 @@ namespace DiscUtils
 
         public override FileLocator GetFileLocator()
         {
+#if NETSTANDARD
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return new LocalFileLocator(Path.GetDirectoryName(_path) + @"\");
+            }
+            else
+            {
+                return new LocalFileLocator(_path.Replace(_path.Split('/').Last(), string.Empty));
+            }
+#else
+
             return new LocalFileLocator(Path.GetDirectoryName(_path) + @"\");
+#endif
         }
 
         public override string GetFileName()

@@ -23,6 +23,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using DiscUtils.Internal;
 using DiscUtils.Streams;
@@ -97,8 +99,18 @@ namespace DiscUtils.Vhd
         /// </summary>
         /// <param name="path">The file path to open.</param>
         /// <param name="access">Controls how the file can be accessed.</param>
+#if NETSTANDARD
         public DiskImageFile(string path, FileAccess access)
-            : this(new LocalFileLocator(Path.GetDirectoryName(path)), Path.GetFileName(path), access) {}
+                    : this(
+                          new LocalFileLocator(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                          Path.GetDirectoryName(path) : path.Replace(path.Split('/').Last(), string.Empty)),
+                          RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                          Path.GetFileName(path) : path.Split('/').Last(),
+                          access) { }
+#else
+        public DiskImageFile(string path, FileAccess access)
+                    : this(new LocalFileLocator(Path.GetDirectoryName(path)), Path.GetFileName(path), access) {}
+#endif
 
         internal DiskImageFile(FileLocator locator, string path, Stream stream, Ownership ownsStream)
             : this(stream, ownsStream)

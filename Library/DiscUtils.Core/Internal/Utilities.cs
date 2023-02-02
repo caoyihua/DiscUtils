@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright (c) 2008-2011, Kenneth Bell
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -23,6 +23,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -276,22 +278,28 @@ namespace DiscUtils.Internal
         /// </returns>
         public static string ResolveRelativePath(string basePath, string relativePath)
         {
-            if (string.IsNullOrEmpty(basePath))
+#if NETSTANDARD
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return relativePath;
+                return ResolveRelativePathInternal(basePath, relativePath);
             }
-
-            if (!basePath.EndsWith(@"\"))
-                basePath = Path.GetDirectoryName(basePath);
-
-            string merged = Path.GetFullPath(Path.Combine(basePath, relativePath));
-
-            if (basePath.StartsWith(@"\") && merged.Length > 2 && merged[1].Equals(':'))
+            else
             {
-                return merged.Substring(2);
-            }
+                relativePath = relativePath.Replace(@"\","/");
+                if (string.IsNullOrEmpty(basePath))
+                {
+                    return relativePath;
+                }
 
-            return merged;
+                if (!basePath.EndsWith("/"))
+                    basePath = basePath.Replace(basePath.Split('/').Last(), string.Empty); ;
+
+                string merged = Path.GetFullPath(Path.Combine(basePath, relativePath));
+                return merged;
+            }
+#else
+            return ResolveRelativePathInternal(basePath, relativePath);
+#endif
         }
 
         public static string ResolvePath(string basePath, string path)
@@ -463,5 +471,38 @@ namespace DiscUtils.Internal
         }
 
         #endregion
+
+        /// <summary>
+        /// Resolves a relative path into an absolute one.
+        /// </summary>
+        /// <param name="basePath">The base path to resolve from.</param>
+        /// <param name="relativePath">The relative path.</param>
+        /// <returns>The absolute path. If no <paramref name="basePath"/> is specified
+        /// then relativePath is returned as-is. If <paramref name="relativePath"/>
+        /// contains more '..' characters than the base path contains levels of
+        /// directory, the resultant string be the root drive followed by the file name.
+        /// If no the basePath starts with '\' (no drive specified) then the returned
+        /// path will also start with '\'.
+        /// For example: (\TEMP\Foo.txt, ..\..\Bar.txt) gives (\Bar.txt).
+        /// </returns>
+        private static string ResolveRelativePathInternal(string basePath, string relativePath)
+        {
+            if (string.IsNullOrEmpty(basePath))
+            {
+                return relativePath;
+            }
+
+            if (!basePath.EndsWith(@"\"))
+                basePath = Path.GetDirectoryName(basePath);
+
+            string merged = Path.GetFullPath(Path.Combine(basePath, relativePath));
+
+            if (basePath.StartsWith(@"\") && merged.Length > 2 && merged[1].Equals(':'))
+            {
+                return merged.Substring(2);
+            }
+
+            return merged;
+        }
     }
 }

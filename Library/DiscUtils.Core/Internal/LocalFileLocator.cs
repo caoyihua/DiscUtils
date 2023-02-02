@@ -22,6 +22,8 @@
 
 using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace DiscUtils.Internal
 {
@@ -61,12 +63,34 @@ namespace DiscUtils.Internal
 
         public override string GetDirectoryFromPath(string path)
         {
+#if NETSTANDARD
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return Path.GetDirectoryName(path);
+            }
+            else
+            {
+                return path.Replace(path.Split('/').Last(), string.Empty);
+            }
+#else
             return Path.GetDirectoryName(path);
+#endif
         }
 
         public override string GetFileFromPath(string path)
         {
+#if NETSTANDARD
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return Path.GetFileName(path);
+            }
+            else
+            {
+                return path.Split('/').Last();
+            }
+#else
             return Path.GetFileName(path);
+#endif
         }
 
         public override DateTime GetLastWriteTimeUtc(string path)
